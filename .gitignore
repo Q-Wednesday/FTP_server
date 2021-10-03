@@ -1,6 +1,5 @@
 # Prerequisites
 *.d
-
 # Object files
 *.o
 *.ko
@@ -50,3 +49,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+#jetbrains IDE
+.idea
+
+#cmake
+cmake-build-debug

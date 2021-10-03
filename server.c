@@ -9,6 +9,7 @@
 #include <memory.h>
 #include <stdio.h>
 
+#define LISTENPORT 21
 
 int main(int argc, char **argv) {
 	int listenfd, connfd;		//监听socket和连接socket不一样，后者用于数据传输
@@ -26,7 +27,7 @@ int main(int argc, char **argv) {
 	//设置本机的ip和port
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_port = 6789;
+	addr.sin_port = htons(LISTENPORT);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);	//监听"0.0.0.0"
 
 	//将本机的ip和port与socket绑定
@@ -49,7 +50,7 @@ int main(int argc, char **argv) {
 			continue;
 		}
 		
-		//榨干socket传来的内容
+		/*榨干socket传来的内容
 		p = 0;
 		while (1) {
 			int n = read(connfd, sentence + p, 8191 - p);
@@ -74,11 +75,15 @@ int main(int argc, char **argv) {
 		for (p = 0; p < len; p++) {
 			sentence[p] = toupper(sentence[p]);
 		}
+        */
 
-		//发送字符串到socket
+		//发送字符串到socket,问候信息
+        char greet_sentence[]="220 Anonymous FTP server ready.\r\n";
+        int len= strlen(greet_sentence);
  		p = 0;
 		while (p < len) {
-			int n = write(connfd, sentence + p, len + 1 - p);
+			int n = write(connfd, greet_sentence + p, len + 1 - p);
+            printf("%d\n",n);
 			if (n < 0) {
 				printf("Error write(): %s(%d)\n", strerror(errno), errno);
 				return 1;
@@ -86,10 +91,29 @@ int main(int argc, char **argv) {
 				p += n;
 			}			
 		}
-
-		close(connfd);
+        printf("wait client\n");
+        p=0;
+        while (1) {
+            int n = read(connfd, sentence + p, 8191 - p);
+            printf("receive: %d\n",n);
+            if (n < 0) {
+                printf("Error read(): %s(%d)\n", strerror(errno), errno);
+                close(connfd);
+                continue;
+            } else if (n == 0) {
+                break;
+            } else {
+                p += n;
+                if (sentence[p - 1] == '\n') {
+                    break;
+                }
+            }
+        }
+        sentence[p - 1] = '\0';
+        len = p - 1;
+        printf("%s\n",sentence);
+        close(connfd);
 	}
-
 	close(listenfd);
 }
 
