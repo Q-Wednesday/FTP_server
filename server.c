@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
         receive_message(connfd,sentence,&len);
         printf("%s\n",sentence);
         if(1||strcmp(sentence,"USER anonymous")==0){
-            char verify_sentence[]="331 Guest login ok, send your complete e-mail address as password.\r\n";
+            char verify_sentence[]="331 Guest login ok\r\n";
             send_message(connfd,verify_sentence,strlen(verify_sentence));
         }
         printf("wait client\n");

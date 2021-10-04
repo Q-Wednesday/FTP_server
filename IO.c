@@ -6,7 +6,7 @@
 int send_message(int connfd,char* buf,int len){
     int p = 0;
     while (p < len) {
-        int n = write(connfd, buf + p, len + 1 - p);
+        int n = write(connfd, buf + p, len - p);
         printf("send %d\n",n);
         if (n < 0) {
             printf("Error write(): %s(%d)\n", strerror(errno), errno);
