@@ -8,7 +8,7 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
-
+#include "server.h"
 #define LISTENPORT 21
 
 int main(int argc, char **argv) {
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 	char sentence[8192];
 	int p;
 	int len;
-
+    printf("test output\n");
 	//创建socket
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
 		printf("Error socket(): %s(%d)\n", strerror(errno), errno);
@@ -49,70 +49,22 @@ int main(int argc, char **argv) {
 			printf("Error accept(): %s(%d)\n", strerror(errno), errno);
 			continue;
 		}
-		
-		/*榨干socket传来的内容
-		p = 0;
-		while (1) {
-			int n = read(connfd, sentence + p, 8191 - p);
-			if (n < 0) {
-				printf("Error read(): %s(%d)\n", strerror(errno), errno);
-				close(connfd);
-				continue;
-			} else if (n == 0) {
-				break;
-			} else {
-				p += n;
-				if (sentence[p - 1] == '\n') {
-					break;
-				}
-			}
-		}
-		//socket接收到的字符串并不会添加'\0'
-		sentence[p - 1] = '\0';
-		len = p - 1;
-		
-		//字符串处理
-		for (p = 0; p < len; p++) {
-			sentence[p] = toupper(sentence[p]);
-		}
-        */
-
 		//发送字符串到socket,问候信息
         char greet_sentence[]="220 Anonymous FTP server ready.\r\n";
         int len= strlen(greet_sentence);
- 		p = 0;
-		while (p < len) {
-			int n = write(connfd, greet_sentence + p, len + 1 - p);
-            printf("%d\n",n);
-			if (n < 0) {
-				printf("Error write(): %s(%d)\n", strerror(errno), errno);
-				return 1;
-	 		} else {
-				p += n;
-			}			
-		}
+        send_message(connfd,greet_sentence,len);
         printf("wait client\n");
-        p=0;
-        while (1) {
-            int n = read(connfd, sentence + p, 8191 - p);
-            printf("receive: %d\n",n);
-            if (n < 0) {
-                printf("Error read(): %s(%d)\n", strerror(errno), errno);
-                close(connfd);
-                continue;
-            } else if (n == 0) {
-                break;
-            } else {
-                p += n;
-                if (sentence[p - 1] == '\n') {
-                    break;
-                }
-            }
-        }
-        sentence[p - 1] = '\0';
-        len = p - 1;
+        receive_message(connfd,sentence,&len);
         printf("%s\n",sentence);
+        if(1||strcmp(sentence,"USER anonymous")==0){
+            char verify_sentence[]="331 Guest login ok, send your complete e-mail address as password.\r\n";
+            send_message(connfd,verify_sentence,strlen(verify_sentence));
+        }
+        printf("wait client\n");
+        receive_message(connfd,sentence,&len);
+        printf("%s %d",sentence,len);
         close(connfd);
+        break;
 	}
 	close(listenfd);
 }
