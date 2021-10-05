@@ -5,4 +5,6 @@
 #ifndef FTP_SERVER_SERVER_H
 #define FTP_SERVER_SERVER_H
 #include "IO.h"
+#include "core.h"
+
 #endif //FTP_SERVER_SERVER_H
