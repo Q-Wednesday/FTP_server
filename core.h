@@ -18,6 +18,7 @@
 
 #include "command.h"
 #define LISTENPORT 21
+
 enum UserState{NOTLOGIN,LOGIN,PORTMODE,PASVMODE};
 typedef struct User{
     enum UserState state;
@@ -25,8 +26,9 @@ typedef struct User{
     struct sockaddr_in addr;//用户的ip地址，port用
     int datafd;//用于传输数据
 }User;
-int init_server();//set,bind,and start to listen
+int init_server(int argc, char **argv);//set,bind,and start to listen
 int init_connection(int connfd);//When user request to connect,send the 220 greeting and require Username
 void* main_process(void* args);//Every thread calls this function
 int handle_command(User *user, char* sentence);
+int parse_arg(int argc,char** argv,char* dir,int* port);
 #endif //FTP_SERVER_CORE_H

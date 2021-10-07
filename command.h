@@ -11,4 +11,6 @@ typedef struct User User;
 int handle_syst(User *user, char* sentence);
 int handle_port(User *user, char*sentence);
 int handle_pasv(User* user,char* sentence);
+int handle_retr(User* user,char* sentence);
+int handle_type(User* user,char* sentence);
 #endif //FTP_SERVER_COMMAND_H

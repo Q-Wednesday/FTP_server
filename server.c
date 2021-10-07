@@ -12,7 +12,7 @@
 #define LISTENPORT 21
 
 int main(int argc, char **argv) {
-    init_server();
+    init_server(argc, argv);
 
 }
 

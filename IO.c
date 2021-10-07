@@ -3,8 +3,10 @@
 //
 //return 1表示正常进行，return 0表示错误进行
 #include "IO.h"
-int send_message(int connfd,char* buf,unsigned long len){
+#define MAX_DATA_SIZE 8196
+int send_message(int connfd, char *buf) {
     int p = 0;
+    int len= strlen(buf);
     while (p < len) {
         int n = write(connfd, buf + p, len - p);
         printf("send %d\n",n);
@@ -40,5 +42,28 @@ int receive_message(int connfd,char* buf,int* len){
     printf("content received:%s\n",buf);
     printf("len:%lu\n", strlen(buf));
     *len=p;
+    return 0;
+}
+
+int send_file(int filefd, char* filename){
+    /**
+     * 给定文件名发送，错误状态有：文件无法打开-1;写入socket错误-2.不管如何都关闭发送口
+     */
+    char buf[MAX_DATA_SIZE];
+    FILE * fp= fopen(filename,"rb");
+    if(fp==NULL){
+        close(filefd);
+        return -1;
+    }
+    while(1){
+        int n= fread(buf, sizeof(char),MAX_DATA_SIZE,fp);
+        if(n==0) break;
+        int m= write(filefd, buf, n);
+        if(m<0){
+            close(filefd);
+            return -2;
+        }
+    }
+    close(filefd);
     return 0;
 }

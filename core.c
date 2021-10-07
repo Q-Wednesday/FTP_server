@@ -3,9 +3,42 @@
 //
 
 #include "core.h"
-
+char dir[100]="/tmp";
 int running=1;
-int init_server(){
+int parse_arg(int argc,char** argv,char* root,int* port){
+    for(int i=1;i<argc;i++){
+        if(strcmp(argv[i],"-port")==0){
+            *port=0;
+            int j=0;
+            while(argv[i+1][j]!='\0'){
+                if(argv[i+1][j]>'9'||argv[i+1][j]<'0') {
+                    printf("cannot parse port number\n");
+                    return -1;
+                }
+                *port=*port*10+argv[i+1][j]-'0';
+                j++;
+            }
+            i++;
+        }else if(strcmp(argv[i],"-root")==0){
+            strcpy(dir,argv[i+1]);
+            i++;
+        }else{
+            printf("cannot parse the args\n");
+            return -2;
+        }
+    }
+    return 0;
+}
+int init_server(int argc, char **argv) {
+    /**
+     * return -1 解析参数失败
+     */
+    int port=LISTENPORT;
+
+    if(parse_arg(argc,argv,dir,&port)!=0){
+        return  -1;
+    }
+    printf("port: %d,root:%s\n",port,dir);
     int listenfd, connfd;		//监听socket和连接socket不一样，后者用于数据传输
     struct sockaddr_in addr;
     pthread_t threads[10];
@@ -22,7 +55,7 @@ int init_server(){
     //设置本机的ip和port
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(LISTENPORT);
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);	//监听"0.0.0.0"
 
     //将本机的ip和port与socket绑定
@@ -79,23 +112,23 @@ int init_connection(int connfd){
         //发送字符串到socket,问候信息
         char greet_sentence[]="220 Anonymous FTP server ready.\r\n";
         int len= strlen(greet_sentence);
-        send_message(connfd,greet_sentence,len);
+        send_message(connfd, greet_sentence);
         printf("wait client\n");
         receive_message(connfd,sentence,&len);
         printf("%s\n",sentence);
         printf("%d\n",strcmp(sentence,"USER anonymous\r\n") );
         if(strcmp(sentence,"USER anonymous\r\n")==0){
             char verify_sentence[]="331 Guest login ok\r\n";
-            send_message(connfd,verify_sentence,strlen(verify_sentence));
+            send_message(connfd, verify_sentence);
         }else{
             char refuse_sentence[]="530 wrong user name.\r\n";
-            send_message(connfd,refuse_sentence, strlen(refuse_sentence));
+            send_message(connfd, refuse_sentence);
         }
         printf("wait client\n");
         receive_message(connfd,sentence,&len);
         printf("%s %d\n",sentence,len);
         char log_in_message[]="230 Guest login ok.\r\n";
-        return send_message(connfd,log_in_message, strlen(log_in_message));
+        return send_message(connfd, log_in_message);
     }
 }
 int handle_command(User *user, char* sentence){
@@ -111,7 +144,12 @@ int handle_command(User *user, char* sentence){
     if(strcmp(command,"PASV")==0){
         return handle_pasv(user,sentence);
     }
-
+    if(strcmp(command,"RETR")==0){
+        return handle_retr(user,sentence);
+    }
+    if(strcmp(command,"TYPE")==0){
+        return handle_type(user,sentence);
+    }
     return -1;
 
 }
