@@ -150,6 +150,9 @@ int handle_command(User *user, char* sentence){
     if(strcmp(command,"TYPE")==0){
         return handle_type(user,sentence);
     }
+    if(strcmp(command,"STOR")==0){
+        return handle_stor(user,sentence);
+    }
     return -1;
 
 }

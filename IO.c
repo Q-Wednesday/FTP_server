@@ -64,6 +64,40 @@ int send_file(int filefd, char* filename){
             return -2;
         }
     }
+    fclose(fp);
+
+
+
+    //close(filefd);
+
+    //int i= recv(filefd,buf,MAX_DATA_SIZE,MSG_PEEK);
+    return 0;
+}
+int receive_file(int filefd,char* filename){
+    /**
+     *
+     */
+    //TODO：处理文件名重复的情况等等.传输有错误，那边已经发完了这边还在等待输入
+    char buf[MAX_DATA_SIZE];
+    FILE *fp= fopen(filename,"wb");
+    if(fp==NULL){
+        close(filefd);
+        return -1;
+    }
+
+    while (1){
+        int n= read(filefd,buf,MAX_DATA_SIZE);
+        if(n<0){
+            close(filefd);
+            return -2;
+        }else if(n==0){
+            break;
+        }
+        int m= fwrite(buf, sizeof(char),n,fp);
+
+    }
+    fclose(fp);
     close(filefd);
     return 0;
+
 }

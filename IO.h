@@ -15,4 +15,5 @@
 int send_message(int connfd, char *buf);
 int receive_message(int connfd,char* buf,int* len);
 int send_file(int filefd, char* filename);
+int receive_file(int filefd,char* filename);
 #endif //FTP_SERVER_IO_H
