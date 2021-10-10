@@ -14,4 +14,12 @@ int handle_pasv(User* user,char* sentence);
 int handle_retr(User* user,char* sentence);
 int handle_type(User* user,char* sentence);
 int handle_stor(User* user,char* sentence);
+int handle_quit(User* user,char*sentence);
+int handle_list(User* user,char* sentence);
+int handle_mkd(User* user,char* sentence);
+int handle_pwd(User*user,char*sentence);
+int handle_cwd(User*user,char* sentence);
+int handle_rmd(User*user,char* sentence);
+int handle_rnfr(User*user,char*sentence);
+int handle_rnto(User*user, char*sentence);
 #endif //FTP_SERVER_COMMAND_H

@@ -3,7 +3,7 @@
 //
 
 #include "core.h"
-char dir[100]="/tmp";
+char dir[MAX_MESSAGE_SIZE]="/tmp";
 int running=1;
 int parse_arg(int argc,char** argv,char* root,int* port){
     for(int i=1;i<argc;i++){
@@ -77,8 +77,10 @@ int init_server(int argc, char **argv) {
             printf("Error accept(): %s(%d)\n", strerror(errno), errno);
             continue;
         }
+        //TODO: 应对前面有用户已经释放的情况
         users[p].connfd=connfd;
         users[p].state=NOTLOGIN;
+        strcpy(users[p].dir,"/");//默认进入的是根文件夹
         //TODO:应对用户过多，创建进程失败等情况
         pthread_create(&threads[num_threads++],NULL,main_process,&users[p]);
         p++;
@@ -153,6 +155,32 @@ int handle_command(User *user, char* sentence){
     if(strcmp(command,"STOR")==0){
         return handle_stor(user,sentence);
     }
+    if(strcmp(command,"QUIT")==0 || strcmp(command,"ABOR")==0){
+        return handle_quit(user,sentence);
+    }
+    if(strcmp(command,"LIST")==0){
+        return handle_list(user,sentence);
+    }
+    if(strcmp(command,"PWD\r")==0){
+        return handle_pwd(user,sentence);
+    }
+    if(strcmp(command,"MKD ")==0){
+        return handle_mkd(user,sentence);
+    }
+    if(strcmp(command,"CWD ")==0){
+        return handle_cwd(user,sentence);
+    }
+    if(strcmp(command,"RMD ")==0){
+        return handle_rmd(user,sentence);
+    }
+    if(strcmp(command,"RNTO")==0){
+        return handle_rnto(user,sentence);
+    }
+    if(strcmp(command,"RNFR")==0){
+        return handle_rnfr(user,sentence);
+    }
+
+
     return -1;
 
 }
