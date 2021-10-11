@@ -83,9 +83,11 @@ int init_server(int argc, char **argv) {
         strcpy(users[p].dir,"/");//默认进入的是根文件夹
         //TODO:应对用户过多，创建进程失败等情况
         pthread_create(&threads[num_threads++],NULL,main_process,&users[p]);
+        printf("create user\n");
         p++;
     }
     close(listenfd);
+    return 0;
 }
 
 void* main_process(void* args){
@@ -103,12 +105,12 @@ void* main_process(void* args){
         receive_message(user->connfd, sentence, &len);
     }
     close(user->connfd);
-
+    return NULL;
 }
 int init_connection(int connfd){
     char sentence[8192];
-    int p;
-    int len;
+    //int p;
+    //int len;
     //持续监听连接请求
     while (1) {
         //发送字符串到socket,问候信息

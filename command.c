@@ -16,7 +16,7 @@
 #define REJECT_FILE_TRANS_NOT_CON "425 No TCP connection was established\r\n"
 #define ACCECPT_FILE_TRANS "226 Transfer complete\r\n"
 #define REJECT_RETR_READFILE "451 The server had trouble reading the file\r\n"
-#define  ACCEPT_TYPE "200 Type set to I\r\n"
+#define  ACCEPT_TYPE "200 Type set to I.\r\n"
 #define GOODBYE "221 Good Bye\r\n"
 #define LS_COMMAND "ls -l %s%s"
 #define ACCEPT_DIR "257 \"%s\"\r\n"
@@ -171,13 +171,15 @@ int connect_filefd(User *user, char *sentence) {
         //设置不阻塞
         fcntl(user->filefd, F_SETFL, O_NONBLOCK);
         return 0;
+    }else{
+        return 0;
     }
 }
 
 int handle_retr(User *user, char *sentence) {
     //TODO:解析文件名目前就按照第五个字符开始是文件名处理.进行异常处理,return 非0的地方
     //重构该函数与stor，二者共性多
-    char filename[MAX_MESSAGE_SIZE],message[MAX_MESSAGE_SIZE];
+    char filename[MAX_DATA_SIZE],message[MAX_MESSAGE_SIZE];
     printf("dir:%s\n", dir);
     int len = strlen(sentence);
     sentence[len - 2] = '\0';//去掉\r\n
@@ -202,11 +204,11 @@ int handle_type(User *user, char *sentence) {
     if (sentence[5] == 'I' ||sentence[5]=='A') {
         return send_message(user->connfd, ACCEPT_TYPE);
     }
-
+    return -1;
 }
 
 int handle_stor(User *user, char *sentence) {
-    char filename[MAX_MESSAGE_SIZE],message[MAX_MESSAGE_SIZE];
+    char filename[MAX_DATA_SIZE],message[MAX_MESSAGE_SIZE];
     printf("dir:%s\n", dir);
     int len = strlen(sentence);
     sentence[len - 2] = '\0';//去掉\r\n
@@ -225,6 +227,7 @@ int handle_stor(User *user, char *sentence) {
     } else if (result == -1) {
         return send_message(user->connfd, REJECT_RETR_READFILE);
     }
+    return -2;
 }
 
 int handle_quit(User *user, char *sentence) {
@@ -290,7 +293,7 @@ int parse_dir(char* user_path_parsed,char*source,User* user){
 int handle_list(User* user,char* sentence){
     //使用管道执行ls命令并获取输出
     //TODO:没做错误的处理
-    char command[MAX_MESSAGE_SIZE],message[MAX_MESSAGE_SIZE];
+    char command[MAX_DATA_SIZE],message[MAX_MESSAGE_SIZE];
     if(strlen(sentence)<=5){
         sprintf(command,LS_COMMAND,dir,user->dir);
     }else{
@@ -312,7 +315,7 @@ int handle_list(User* user,char* sentence){
 }
 int handle_mkd(User* user,char* sentence){
     //TODO:处理创建出错的情况.不允许出现../
-    char command[MAX_MESSAGE_SIZE],user_path_parsed[MAX_MESSAGE_SIZE];//message[MAX_MESSAGE_SIZE],
+    char command[MAX_DATA_SIZE],user_path_parsed[MAX_MESSAGE_SIZE];//message[MAX_MESSAGE_SIZE],
     if(parse_dir(user_path_parsed,sentence+4,user)){
         return send_message(user->connfd,MKD_FAILED);
     }
@@ -330,13 +333,13 @@ int handle_mkd(User* user,char* sentence){
 }
 
 int handle_pwd(User*user,char*sentence){
-    char message[MAX_MESSAGE_SIZE];
+    char message[MAX_DATA_SIZE];
     sprintf(message, ACCEPT_DIR, user->dir);
     return send_message(user->connfd,message);
 }
 int handle_cwd(User*user,char* sentence){
 
-    char command[MAX_MESSAGE_SIZE],full_path[MAX_MESSAGE_SIZE],
+    char command[MAX_DATA_SIZE],full_path[MAX_MESSAGE_SIZE*2],
     user_path_parsed[MAX_MESSAGE_SIZE];
 
     if(parse_dir(user_path_parsed,sentence+4,user)){
@@ -355,7 +358,7 @@ int handle_cwd(User*user,char* sentence){
 int handle_rmd(User*user,char* sentence){
     //TODO:处理权限
 
-    char command[MAX_MESSAGE_SIZE],user_path_parsed[MAX_MESSAGE_SIZE];
+    char command[MAX_DATA_SIZE],user_path_parsed[MAX_MESSAGE_SIZE];
     if(parse_dir(user_path_parsed,sentence+4,user)){
         return send_message(user->connfd,RMD_FAILED);
     }
@@ -368,7 +371,7 @@ int handle_rmd(User*user,char* sentence){
 
 int handle_rnfr(User*user,char*sentence){
     //先检测文件是否存在
-    char user_path_parsed[MAX_MESSAGE_SIZE],command[MAX_MESSAGE_SIZE];
+    char user_path_parsed[MAX_MESSAGE_SIZE*2],command[MAX_DATA_SIZE];
     if(parse_dir(user_path_parsed,sentence+5,user)){
         return send_message(user->connfd,REJECT_RNFR_A);
     }
@@ -380,7 +383,7 @@ int handle_rnfr(User*user,char*sentence){
     return send_message(user->connfd,ACCEPT_RNFR);
 }
 int handle_rnto(User*user, char*sentence){
-    char user_path_parsed[MAX_MESSAGE_SIZE],command[MAX_MESSAGE_SIZE];
+    char user_path_parsed[MAX_MESSAGE_SIZE*2],command[MAX_DATA_SIZE];
     if(parse_dir(user_path_parsed,sentence+5,user)){
         return send_message(user->connfd,REJECT_RNTO);
     }

@@ -10,7 +10,7 @@ int send_message(int connfd, char *buf) {
     size_t len= strlen(buf);
     while (p < len) {
         ssize_t n = write(connfd, buf + p, len - p);
-        printf("send %d\n",n);
+        printf("send %ld\n",n);
         if (n <= 0) {
             printf("Error write(): %s(%d)\n", strerror(errno), errno);
             return -1;
@@ -91,7 +91,7 @@ int receive_file(int filefd,char* filename){
         }else if(n==0){
             break;
         }
-        int m= fwrite(buf, sizeof(char),n,fp);
+        fwrite(buf, sizeof(char),n,fp);
 
     }
     fclose(fp);
