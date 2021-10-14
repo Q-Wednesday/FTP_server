@@ -18,6 +18,7 @@ int send_message(int connfd, char *buf) {
             p += n;
         }
     }
+    printf("send %s",buf);
     return 0;
 }
 

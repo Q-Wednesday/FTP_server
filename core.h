@@ -27,7 +27,7 @@ typedef struct User{
     int filefd;//用于传输数据
     FILE *fp;//文件流
     pthread_t file_thread;
-    char dir[MAX_MESSAGE_SIZE];//当前所在目录.统一保留最后一个/
+    char dir[MAX_MESSAGE_SIZE];//当前所在目录.统一不要最后一个/，除了根目录
     char filename[MAX_MESSAGE_SIZE];//用于RNFR命令的文件名,直接存服务器文件名了
 }User;
 int init_server(int argc, char **argv);//set,bind,and start to listen

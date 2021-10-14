@@ -254,7 +254,10 @@ int parse_dir(char* user_path_parsed,char*source,User* user){
         //绝对路径
         sprintf(user_path,"%s",source);
     }else{
-        sprintf(user_path,"%s%s",user->dir,source);
+        if(strlen(user->dir)==1)
+            sprintf(user_path,"%s%s",user->dir,source);
+        else
+            sprintf(user_path,"%s/%s",user->dir,source);
     }
     int p=0,q=0;//p指向原本的，q指向目标
     while (user_path[p]!='\0'){
@@ -294,7 +297,7 @@ int handle_list(User* user,char* sentence){
     //使用管道执行ls命令并获取输出
     //TODO:没做错误的处理
     char command[MAX_DATA_SIZE],message[MAX_MESSAGE_SIZE];
-    if(strlen(sentence)<=5){
+    if(strlen(sentence)<=6){
         sprintf(command,LS_COMMAND,dir,user->dir);
     }else{
         char user_path_parsed[MAX_MESSAGE_SIZE];
