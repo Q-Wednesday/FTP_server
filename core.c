@@ -4,7 +4,48 @@
 
 #include "core.h"
 char dir[MAX_MESSAGE_SIZE]="/tmp";
+char local_ip[20];
 int running=1;
+void get_local_buf(char *buffer){
+    const char* google_dns_server = "8.8.8.8";
+    int dns_port = 53;
+    struct sockaddr_in serv;
+    int sock = socket ( AF_INET, SOCK_DGRAM, 0);
+
+    //Socket could not be created
+    if(sock < 0)
+    {
+        perror("Socket error");
+    }
+
+    memset( &serv, 0, sizeof(serv) );
+    serv.sin_family = AF_INET;
+    serv.sin_addr.s_addr = inet_addr( google_dns_server );
+    serv.sin_port = htons( dns_port );
+
+    int err = connect( sock , (const struct sockaddr*) &serv , sizeof(serv) );
+
+    struct sockaddr_in name;
+    socklen_t namelen = sizeof(name);
+    err = getsockname(sock, (struct sockaddr*) &name, &namelen);
+    const char* p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
+    if(p != NULL)
+    {
+        printf("Local ip is : %s \n" , buffer);
+    }
+    else
+    {
+        //Some error
+        printf ("Error number : %d . Error message : %s \n" , errno , strerror(errno));
+    }
+    for(int i=0;i< strlen(buffer);i++){
+        //转化为逗号分隔
+        if(buffer[i]=='.'){
+            buffer[i]=',';
+        }
+    }
+    close(sock);
+}
 int parse_arg(int argc,char** argv,char* root,int* port){
     for(int i=1;i<argc;i++){
         if(strcmp(argv[i],"-port")==0){
@@ -34,7 +75,7 @@ int init_server(int argc, char **argv) {
      * return -1 解析参数失败
      */
     int port=LISTENPORT;
-
+    get_local_buf(local_ip);
     if(parse_arg(argc,argv,dir,&port)!=0){
         return  -1;
     }

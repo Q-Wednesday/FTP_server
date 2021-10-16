@@ -37,7 +37,7 @@
 #define REJECT_RNTO "550 auth\r\n"
 #define ACCEPT_RNTO "250 Renamed successfully\r\n"
 extern char dir[MAX_MESSAGE_SIZE];
-
+extern char local_ip[20];
 int handle_syst(User *user, char *sentence) {
     if (strcmp(sentence, "SYST\r\n") == 0) {
         return send_message(user->connfd, SYS_INFO);
@@ -115,7 +115,11 @@ int handle_port(User *user, char *sentence) {
 }
 
 int handle_pasv(User *user, char *sentence) {
-
+    if(user->state==PASVMODE){
+        //丢弃已有连接
+        close(user->filefd);
+        user->state=LOGIN;
+    }
     struct sockaddr_in addr;
     //设置本机的ip和port
     memset(&addr, 0, sizeof(addr));
@@ -142,7 +146,8 @@ int handle_pasv(User *user, char *sentence) {
         printf("Error listen(): %s(%d)\n", strerror(errno), errno);
         return 1;
     }
-    sprintf(message, ENTER_PASV, "127,0,0,1", random_port / 256, random_port % 256);
+
+    sprintf(message, ENTER_PASV, local_ip, random_port / 256, random_port % 256);
     send_message(user->connfd, message);
     if ((user->filefd = accept(listenfd, NULL, NULL)) == -1) {
         printf("Error accept(): %s(%d)\n", strerror(errno), errno);
@@ -290,7 +295,10 @@ int parse_dir(char* user_path_parsed,char*source,User* user){
             }
         }
     }
-    user_path_parsed[q]='\0';
+    if(user_path_parsed[q-1]=='/'&& q!=1){
+        user_path_parsed[q-1]='\0';//把最后的/去除
+    }else
+        user_path_parsed[q]='\0';
     return 0;
 }
 int handle_list(User* user,char* sentence){
