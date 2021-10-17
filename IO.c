@@ -85,11 +85,12 @@ int receive_file(int filefd,char* filename){
         return -1;
     }
     ssize_t n=MAX_DATA_SIZE;
-    while (n==MAX_DATA_SIZE){
+    while (1){
         n= recv(filefd,buf,MAX_DATA_SIZE,MSG_WAITALL);
         printf("receive file:%d\n",n);
         if(n<0){
             close(filefd);
+            close(fp);
             return -2;
         }else if(n==0){
             break;

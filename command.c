@@ -99,8 +99,6 @@ int handle_port(User *user, char *sentence) {
     if (parse_ip(user, sentence + p) != 0) {
         return -1;
     }
-
-
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
         printf("Error socket(): %s(%d)\n", strerror(errno), errno);
@@ -110,8 +108,6 @@ int handle_port(User *user, char *sentence) {
     user->state=PORTMODE;
     //printf("set to portmode\n");
     return send_message(user->connfd, ACCEPT_PORT);
-
-
 }
 
 int handle_pasv(User *user, char *sentence) {
@@ -174,7 +170,7 @@ int connect_filefd(User *user, char *sentence) {
             return 1;
         }
         //设置不阻塞
-        fcntl(user->filefd, F_SETFL, O_NONBLOCK);
+        //fcntl(user->filefd, F_SETFL, O_NONBLOCK);
         return 0;
     }else{
         return 0;
