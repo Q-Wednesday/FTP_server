@@ -59,7 +59,7 @@ void* send_file(void *args){
         n= fread(buf, sizeof(char),MAX_DATA_SIZE,user->fp);
 
         m= send(user->filefd,buf,n,0);
-        printf("send m:%d,n:%d\n",m,n);
+        printf("send m:%ld,n:%ld\n",m,n);
         if(m<0){
             //TODO:做异常处理
             close(user->filefd);
@@ -87,10 +87,10 @@ int receive_file(int filefd,char* filename){
     ssize_t n=MAX_DATA_SIZE;
     while (1){
         n= recv(filefd,buf,MAX_DATA_SIZE,MSG_WAITALL);
-        printf("receive file:%d\n",n);
+        printf("receive file:%ld\n",n);
         if(n<0){
             close(filefd);
-            close(fp);
+            fclose(fp);
             return -2;
         }else if(n==0){
             break;

@@ -240,7 +240,7 @@ int handle_quit(User *user, char *sentence) {
 
 int parse_dir(char* user_path_parsed,char*source,User* user){
     //source是收到的文件夹名称
-    char user_path[MAX_MESSAGE_SIZE];
+    char user_path[MAX_MESSAGE_SIZE*2];
     //进行对路径的处理，主要做法是忽略./和回退../。如果回退到了根目录就不再回退
     size_t len= strlen(source);
     source[len-2]='\0';
