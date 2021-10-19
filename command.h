@@ -7,19 +7,23 @@
 #include "IO.h"
 #include "core.h"
 #include <arpa/inet.h>
+
+
 typedef struct User User;
-int handle_syst(User *user, char* sentence);
-int handle_port(User *user, char*sentence);
-int handle_pasv(User* user,char* sentence);
-int handle_retr(User* user,char* sentence);
-int handle_type(User* user,char* sentence);
-int handle_stor(User* user,char* sentence);
-int handle_quit(User* user,char*sentence);
-int handle_list(User* user,char* sentence);
-int handle_mkd(User* user,char* sentence);
-int handle_pwd(User*user,char*sentence);
-int handle_cwd(User*user,char* sentence);
-int handle_rmd(User*user,char* sentence);
-int handle_rnfr(User*user,char*sentence);
-int handle_rnto(User*user, char*sentence);
+int handle_USER(User* user,char* sentence);
+int handle_PASS(User* user,char* sentence);
+int handle_SYST(User *user, char* sentence);
+int handle_PORT(User *user, char*sentence);
+int handle_PASV(User* user, char* sentence);
+int handle_RETR(User* user, char* sentence);
+int handle_TYPE(User* user, char* sentence);
+int handle_STOR(User* user, char* sentence);
+int handle_QUIT(User* user, char*sentence);
+int handle_LIST(User* user, char* sentence);
+int handle_MKD(User* user, char* sentence);
+int handle_PWD(User*user, char*sentence);
+int handle_CWD(User*user, char* sentence);
+int handle_RMD(User*user, char* sentence);
+int handle_RNFR(User*user, char*sentence);
+int handle_RNTO(User*user, char*sentence);
 #endif //FTP_SERVER_COMMAND_H

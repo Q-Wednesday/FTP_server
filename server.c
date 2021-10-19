@@ -1,18 +1,18 @@
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include <unistd.h>
-#include <errno.h>
-
-#include <ctype.h>
-#include <string.h>
-#include <memory.h>
-#include <stdio.h>
 #include "server.h"
 #define LISTENPORT 21
 
 int main(int argc, char **argv) {
-    init_server(argc, argv);
-
+    int state=init_server(argc, argv);
+    switch (state) {
+        case -1:
+            printf("Argument Parsed Error\n");
+            break;
+        case 1:
+            printf("Socket error\n");
+            break;
+        default:
+            break;
+    }
+    return state;
 }
 
