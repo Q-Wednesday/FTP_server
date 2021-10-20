@@ -3,7 +3,7 @@
 //
 //return 1表示正常进行，return 0表示错误进行
 #include "IO.h"
-#include "core.h"
+
 
 int send_message(int connfd, char *buf) {
     int p = 0;

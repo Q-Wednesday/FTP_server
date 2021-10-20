@@ -12,8 +12,7 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
-#define MAX_DATA_SIZE 8196
-#define MAX_MESSAGE_SIZE 1024
+#include "utils.h"
 int send_message(int connfd, char *buf);
 int receive_message(int connfd,char* buf,int* len);
 void* send_file(void *args);

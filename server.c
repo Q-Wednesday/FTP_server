@@ -1,6 +1,6 @@
-#include "server.h"
-#define LISTENPORT 21
 
+#define LISTENPORT 21
+#include "core.h"
 int main(int argc, char **argv) {
     int state=init_server(argc, argv);
     switch (state) {

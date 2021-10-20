@@ -5,11 +5,8 @@
 #ifndef FTP_SERVER_COMMAND_H
 #define FTP_SERVER_COMMAND_H
 #include "IO.h"
-#include "core.h"
+#include "utils.h"
 #include <arpa/inet.h>
-
-
-typedef struct User User;
 int handle_USER(User* user,char* sentence);
 int handle_PASS(User* user,char* sentence);
 int handle_SYST(User *user, char* sentence);

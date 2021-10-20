@@ -6,6 +6,6 @@ FIND_PACKAGE(Threads)
 include_directories(.)
 
 add_executable(server
-        server.c IO.c IO.h server.h core.c core.h command.c command.h)
+        server.c IO.c IO.h core.c core.h command.c command.h utils.h utils.c)
 TARGET_LINK_LIBRARIES(server ${CMAKE_THREAD_LIBS_INIT})
 add_definitions(-w)
