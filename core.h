@@ -15,7 +15,11 @@
 #include "command.h"
 #define LISTENPORT 21
 #define MAX_CONNECTION 2
-int init_server(int argc, char **argv);//set,bind,and start to listen
+typedef struct ServerParams{
+    int argc;
+    int* argv;
+}ServerParams;
+void* init_server(void* args);//set,bind,and start to listen
 void* main_process(void* args);//Every user has one
 int handle_command(User *user, char* sentence);//Handle the command
 int parse_arg(int argc, char **argv, int *port);//Parse the arg

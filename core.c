@@ -71,15 +71,16 @@ int parse_arg(int argc, char **argv, int *port) {
     return 0;
 }
 
-int init_server(int argc, char **argv) {
+void* init_server(void* args) {
     /**
-     * return -1 解析参数失败
-     * return 1 连接失败
+     *
+     *
      */
+     ServerParams * params=(ServerParams*)args;
     int port = LISTENPORT;//default port
     get_local_ip(local_ip);
-    if (parse_arg(argc, argv, &port) != 0) {
-        return -1;
+    if (parse_arg(params->argc, params->argv, &port) != 0) {
+        return NULL;
     }
     //printf("port: %d,root:%s\n",port,rootDir);
     int listenfd, connfd;
@@ -93,7 +94,7 @@ int init_server(int argc, char **argv) {
     //创建socket
     if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
         printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-        return 1;
+        return NULL;
     }
 
     //设置本机的ip和port
@@ -105,13 +106,13 @@ int init_server(int argc, char **argv) {
     //将本机的ip和port与socket绑定
     if (bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         printf("Error bind(): %s(%d)\n", strerror(errno), errno);
-        return 1;
+        return NULL;
     }
 
     //开始监听socket
     if (listen(listenfd, 10) == -1) {
         printf("Error listen(): %s(%d)\n", strerror(errno), errno);
-        return 1;
+        return NULL;
     }
     //持续监听连接请求
 
@@ -142,7 +143,7 @@ int init_server(int argc, char **argv) {
         }
     }
     close(listenfd);
-    return 0;
+    return NULL;
 }
 
 void *main_process(void *args) {

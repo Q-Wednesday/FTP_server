@@ -3,7 +3,7 @@
 //
 //return 1表示正常进行，return 0表示错误进行
 #include "IO.h"
-
+#define ACCECPT_FILE_TRANS "226 Transfer complete\r\n"
 
 int send_message(int connfd, char *buf) {
     int p = 0;
@@ -69,35 +69,34 @@ void* send_file(void *args){
     close(user->filefd);
     fclose(user->fp);
     user->state=LOGIN;
-    send_message(user->connfd,"226 Transfer complete\r\n");
+    send_message(user->connfd,ACCECPT_FILE_TRANS);
     //int i= recv(filefd,buf,MAX_DATA_SIZE,MSG_PEEK);
     return NULL;
 }
-int receive_file(int filefd,char* filename){
+void* receive_file(void* args){
     /**
      *
      */
     //TODO：处理文件名重复的情况等等.传输有错误，那边已经发完了这边还在等待输入
+    User* user=(User*)args;
     char buf[MAX_DATA_SIZE]={0};
-    FILE *fp= fopen(filename,"wb");
-    if(fp==NULL){
-        close(filefd);
-        return -1;
-    }
+
     ssize_t n=MAX_DATA_SIZE;
     while (1){
-        n= recv(filefd,buf,MAX_DATA_SIZE,MSG_WAITALL);
+        n= recv(user->filefd,buf,MAX_DATA_SIZE,MSG_WAITALL);
         printf("receive file:%ld\n",n);
         if(n<0){
-            close(filefd);
-            fclose(fp);
+            close(user->filefd);
+            fclose(user->fp);
             return -2;
         }else if(n==0){
             break;
         }
-        fwrite(buf, sizeof(char),n,fp);
+        fwrite(buf, sizeof(char),n,user->fp);
     }
-    fclose(fp);
-    close(filefd);
-    return 0;
+    user->state = LOGIN;
+    fclose(user->fp);
+    close(user->filefd);
+    send_message(user->connfd, ACCECPT_FILE_TRANS);
+    return NULL;
 }

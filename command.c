@@ -9,14 +9,13 @@
 #define WRONG_USER "530 wrong user name.\r\n"
 #define LOGIN_SUCCESS "230 Guest login ok.\r\n"
 #define WRONG_COMMAND "500 Wrong Command\r\n"
-#define  SYS_INFO "215 UNIX Type: L8\r\n"
+#define SYS_INFO "215 UNIX Type: L8\r\n"
 #define ACCEPT_PORT "200 PORT command successful\r\n"
 #define ENTER_PASV "227 Entering Passive Mode (%s,%d,%d)\r\n"
 #define ACCEPT_CONNECTION "150 Opening BINARY mode data connection for %s \r\n"
 #define ACCEPT_CONNECTION_ASCII "150 Opening ASCII mode data connection for %s \r\n"
-#define ACCECPT_FILE_TRANS "226 Transfer complete\r\n"
 #define REJECT_RETR_READFILE "451 The server had trouble reading the file\r\n"
-#define  ACCEPT_TYPE "200 Type set to I.\r\n"
+#define ACCEPT_TYPE "200 Type set to I.\r\n"
 #define GOODBYE "221 Good Bye\r\n"
 #define LS_COMMAND "ls -l %s%s 2>/dev/null"
 #define ACCEPT_DIR "257 \"%s\"\r\n"
@@ -146,7 +145,6 @@ int handle_RETR(User *user, char *sentence) {
         close(user->filefd);
     }
     int result = pthread_create(&user->file_thread, NULL, &send_file, user);
-
     return result;
 }
 
@@ -169,16 +167,14 @@ int handle_STOR(User *user, char *sentence) {
     }
     sprintf(message, ACCEPT_CONNECTION, sentence + 5);
     send_message(user->connfd, message);
-    int result = receive_file(user->filefd, filename);
-    user->state = LOGIN;
-    //close(user->filefd);
-    //user->filefd=-1;
-    if (result == 0) {
-        return send_message(user->connfd, ACCECPT_FILE_TRANS);
-    } else if (result == -1) {
-        return send_message(user->connfd, REJECT_RETR_READFILE);
+    user->fp= fopen(filename,"wb");
+    if(!user->fp){
+        //TODO:发消息？
+        close(user->filefd);
     }
-    return -2;
+    int result = pthread_create(&user->file_thread,NULL,&receive_file,user);
+
+    return result;
 }
 
 int handle_QUIT(User *user, char *sentence) {
