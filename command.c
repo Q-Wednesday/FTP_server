@@ -4,11 +4,13 @@
 #include "command.h"
 #include <stdlib.h>
 #include<pthread.h>
+
 #define REQ_PASSWORD "331 Guest login ok,send your complete e-mail address as password\r\n"
 #define SERVICE_UNAVAILABLE "421 Service not available, remote server has closed connection\r\n"
-#define WRONG_USER "530 wrong user name.\r\n"
+#define WRONG_USER "530 Wrong user name, only support anonymous.\r\n"
+#define REJECT_PASS "503 USER command has not been sent.\r\n"
 #define LOGIN_SUCCESS "230 Guest login ok.\r\n"
-#define WRONG_COMMAND "500 Wrong Command\r\n"
+#define WRONG_FORMAT "500 Wrong format, the command cannot be recognized\r\n"
 #define SYS_INFO "215 UNIX Type: L8\r\n"
 #define ACCEPT_PORT "200 PORT command successful\r\n"
 #define ENTER_PASV "227 Entering Passive Mode (%s,%d,%d)\r\n"
@@ -16,6 +18,7 @@
 #define ACCEPT_CONNECTION_ASCII "150 Opening ASCII mode data connection for %s \r\n"
 #define REJECT_RETR_READFILE "451 The server had trouble reading the file\r\n"
 #define ACCEPT_TYPE "200 Type set to I.\r\n"
+#define WRONG_PARAM "504 The command under this parameter is not implemented\r\n"
 #define GOODBYE "221 Good Bye\r\n"
 #define LS_COMMAND "ls -l %s%s 2>/dev/null"
 #define ACCEPT_DIR "257 \"%s\"\r\n"
@@ -34,47 +37,100 @@
 #define RNTO_COMMAND "mv %s %s%s"
 #define REJECT_RNTO "550 auth\r\n"
 #define ACCEPT_RNTO "250 Renamed successfully\r\n"
+#define LOCAL_ERROR "451 Requested action aborted: local error in processing.\r\n"
+#define SYNTAX_ERROR "501 Syntax error in parameters or arguments.\r\n"
+#define NOT_LOGIN "530 Not logged in\r\n"
+#define CANNOT_OPEN_DATA_CONNECTION "425 Can't open data connection\r\n"
+#define FILE_UNAVAILABLE "550 Requested action not taken; file unavailable.\r\n"
 extern char rootDir[MAX_MESSAGE_SIZE];
 extern char local_ip[20];
 
 int handle_USER(User *user, char *sentence) {
+    /** Handle the command USER
+     * Only support anonymous
+     * Whether the username is right or wrong,send 331
+     * Use different states to indicate whether the username is correct
+     */
     if (strcmp(sentence, "USER anonymous\r\n") == 0) {
         user->state = REQPASS;
-        return send_message(user->connfd, REQ_PASSWORD);
     } else {
-        return send_message(user->connfd, WRONG_USER);
+        user->state = WRONGUSER;
     }
+    return send_message(user->connfd, REQ_PASSWORD);
 }
 
 int handle_PASS(User *user, char *sentence) {
-    if (user->state != REQPASS)
-        return send_message(user->connfd, WRONG_COMMAND);//只能暂时这么处理一下
-    // 因为不需要做什么处理所以就不做处理
+    /** Handle the command PASS
+     * Just ignore the password(Because of Anonymity)
+     * Send 230 if User name is right
+     * Send 530 if wrong
+     * Send 503 if the previous command is not USER
+     */
+    if (user->state == WRONGUSER) {
+        user->state = NOTLOGIN;
+        return send_message(user->connfd, WRONG_USER);
+    }
+    if (user->state != REQPASS) {
+        user->state = NOTLOGIN;
+        return send_message(user->connfd, REJECT_PASS);
+    }
     user->state = LOGIN;
     return send_message(user->connfd, LOGIN_SUCCESS);
 }
 
 int handle_SYST(User *user, char *sentence) {
+    /** Handle the command SYST
+     * Send 215 if the format of the command is right
+     * Otherwise send 500
+     */
     if (strcmp(sentence, "SYST\r\n") == 0) {
         return send_message(user->connfd, SYS_INFO);
     }
-    return -1;
+    return send_message(user->connfd, WRONG_FORMAT);
 }
 
-
+int handle_TYPE(User *user, char *sentence) {
+    /** Handle the command TYPE
+     * Only support TYPE I
+     * Send 200 if the parameter is right
+     * Otherwise send 504
+     */
+    if (sentence[5] == 'I') {
+        return send_message(user->connfd, ACCEPT_TYPE);
+    }
+    return send_message(user->connfd, WRONG_PARAM);
+}
 
 int handle_PORT(User *user, char *sentence) {
+    /** Handle the command PORT
+     * Accept with 200
+     */
+
+    //Drop the connection already made
+    if (user->state == PORTMODE || user->state == PASVMODE) {
+        close(user->filefd);
+        user->state = LOGIN;
+    }
+    //If the user did not login, tell the user
+    if (user->state != LOGIN) {
+        send_message(user->connfd, NOT_LOGIN);
+        return -1;
+    }
+    //First,find the address sent by client and parse it.
     int p = 0;
     while (sentence[p] < '0' || sentence[p] > '9') {
         p++;
     }
+    //If cannot be parsed,tell the client
     if (parse_ip(user, sentence + p) != 0) {
-        return -1;
+        return send_message(user->connfd, SYNTAX_ERROR);
     }
+    //Create a socket but do not connect immediately
+    //If cannot create,tell the client
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
         printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-        return 1;
+        return send_message(user->connfd, CANNOT_OPEN_DATA_CONNECTION);
     }
     user->filefd = sockfd;
     user->state = PORTMODE;
@@ -82,130 +138,151 @@ int handle_PORT(User *user, char *sentence) {
 }
 
 int handle_PASV(User *user, char *sentence) {
-    if (user->state == PASVMODE) {
-        //丢弃已有连接
+    /** Handle the command PASV
+     *  accept with 227 and tell the client server's ip and port
+     */
+    //Drop the connection already made
+    if (user->state == PASVMODE || user->state == PORTMODE) {
         close(user->filefd);
         user->state = LOGIN;
     }
+    //If the user did not login, close the connection
+    if (user->state != LOGIN) {
+        send_message(user->connfd, NOT_LOGIN);
+        return -1;
+    }
+
+    //set server's IP address
     struct sockaddr_in addr;
-    //设置本机的ip和port
     memset(&addr, 0, sizeof(addr));
     int random_port = rand() % 45535 + 20000;
-
-    char message[60];
-
+    char message[MAX_MESSAGE_SIZE];
     addr.sin_family = AF_INET;
     addr.sin_port = htons(random_port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);    //监听"0.0.0.0"
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);    //listen on "0.0.0.0"
     int listenfd;
-    //创建socket
-    if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-        printf("Error socket(): %s(%d)\n", strerror(errno), errno);
-        return 1;
-    }
-    //将本机的ip和port与socket绑定
-    if (bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
-        printf("Error bind(): %s(%d)\n", strerror(errno), errno);
-        return 1;
-    }
-    //开始监听socket
-    if (listen(listenfd, 10) == -1) {
-        printf("Error listen(): %s(%d)\n", strerror(errno), errno);
-        return 1;
+    //When any error occured, tell the client
+    if (listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) ||
+                   bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) ||
+                   listen(listenfd, 10)) {
+        printf("Error : %s(%d)\n", strerror(errno), errno);
+        return send_message(user->connfd, CANNOT_OPEN_DATA_CONNECTION);
     }
 
     sprintf(message, ENTER_PASV, local_ip, random_port / 256, random_port % 256);
     send_message(user->connfd, message);
     if ((user->filefd = accept(listenfd, NULL, NULL)) == -1) {
         printf("Error accept(): %s(%d)\n", strerror(errno), errno);
-        return -1;
+        return send_message(user->connfd, CANNOT_OPEN_DATA_CONNECTION);
     }
     user->state = PASVMODE;
     return 0;
 }
 
-
-
 int handle_RETR(User *user, char *sentence) {
-    //TODO:解析文件名目前就按照第五个字符开始是文件名处理.进行异常处理,return 非0的地方
-    //重构该函数与stor，二者共性多
-    char filename[MAX_DATA_SIZE], message[MAX_MESSAGE_SIZE];
-    printf("rootDir:%s\n", rootDir);
-    size_t len = strlen(sentence);
-    sentence[len - 2] = '\0';//去掉\r\n
-    sprintf(filename, "%s%s/%s", rootDir, user->dir, sentence + 5);
+    /** Handle the command RETR
+     *  This function will create a new thread for file transfer
+     */
+
+    //First check the connection
     if (connect_filefd(user, sentence) != 0) {
-        return -1;
+        return 0;
     }
+
+    //Then tell the user the connection was accepted
+    char filename[MAX_DATA_SIZE], message[MAX_MESSAGE_SIZE];
+    size_t len = strlen(sentence);
+    sentence[len - 2] = '\0';//drop \r\n
+    sprintf(filename, "%s%s/%s", rootDir, user->dir, sentence + 5);
     sprintf(message, ACCEPT_CONNECTION, sentence + 5);
     send_message(user->connfd, message);
     user->fp = fopen(filename, "rb");
+    //Handle the error while opening file
     if (!user->fp) {
-        send_message(user->connfd, REJECT_RETR_READFILE);
         close(user->filefd);
+        return send_message(user->connfd, REJECT_RETR_READFILE);
     }
-    int result = pthread_create(&user->file_thread, NULL, &send_file, user);
-    return result;
+    if(pthread_create(&user->file_thread, NULL, &send_file, user)){
+        return send_message(user->connfd,LOCAL_ERROR);
+    }
+
+    return 0;
 }
 
-int handle_TYPE(User *user, char *sentence) {
-    //TODO: 只匹配第五个字符。且A为测试用，因为ftp总会在ls的时候发。
-    if (sentence[5] == 'I' || sentence[5] == 'A') {
-        return send_message(user->connfd, ACCEPT_TYPE);
-    }
-    return -1;
-}
 
 int handle_STOR(User *user, char *sentence) {
-    char filename[MAX_DATA_SIZE], message[MAX_MESSAGE_SIZE];
-    printf("rootDir:%s\n", rootDir);
-    size_t len = strlen(sentence);
-    sentence[len - 2] = '\0';//去掉\r\n
-    sprintf(filename, "%s%s/%s", rootDir, user->dir, sentence + 5);
+    /** Handle the command STOR
+    *  This function will create a new thread for file transfer
+    */
+    //First check the connection
     if (connect_filefd(user, sentence) != 0) {
-        return -1;
+        return 0;
     }
+    //Then tell the user the connection was accepted
+    char filename[MAX_DATA_SIZE], message[MAX_MESSAGE_SIZE];
+    size_t len = strlen(sentence);
+    sentence[len - 2] = '\0';//drop \r\n
+    sprintf(filename, "%s%s/%s", rootDir, user->dir, sentence + 5);
     sprintf(message, ACCEPT_CONNECTION, sentence + 5);
     send_message(user->connfd, message);
-    user->fp= fopen(filename,"wb");
-    if(!user->fp){
-        //TODO:发消息？
+    user->fp = fopen(filename, "wb");
+    if (!user->fp) {
         close(user->filefd);
+        return send_message(user->connfd, REJECT_RETR_READFILE);
     }
-    int result = pthread_create(&user->file_thread,NULL,&receive_file,user);
+    if(pthread_create(&user->file_thread, NULL, &receive_file, user)){
+        return send_message(user->connfd,LOCAL_ERROR);
+    }
 
-    return result;
+    return 0;
 }
 
 int handle_QUIT(User *user, char *sentence) {
-    //TODO:终止用户正在运行的东西
-    send_message(user->connfd, GOODBYE);//关闭是在主过程中
-    return -1;//固定返回-1表示关闭
-
+    /** Handle the command QUIT
+     * return -1 and the main_process will release the user
+     */
+    close(user->filefd);
+    fclose(user->fp);
+    send_message(user->connfd, GOODBYE);
+    return -1;
 }
 
 
 int handle_LIST(User *user, char *sentence) {
-    //使用管道执行ls命令并获取输出
-    //TODO:没做错误的处理
+    /** Handle the command LIST
+     * Use a pipe to get the output of command "ls -l" in shell
+     * If the parameter is parent directory of the root,send 550
+     */
+
+    //First check the connection
+    if (connect_filefd(user, sentence) != 0) {
+        return 0;
+    }
+
     char command[MAX_DATA_SIZE], message[MAX_MESSAGE_SIZE];
+    //Generate the command that will be executed in shell
     if (strlen(sentence) <= 6) {
         sprintf(command, LS_COMMAND, rootDir, user->dir);
     } else {
         char user_path_parsed[MAX_MESSAGE_SIZE];
         if (parse_dir(user_path_parsed, sentence + 5, user)) {
-            return send_message(user->connfd, CWD_FAILED);
+            return send_message(user->connfd, FILE_UNAVAILABLE);
         }
         sprintf(command, LS_COMMAND, rootDir, user_path_parsed);
     }
-    if (connect_filefd(user, sentence) != 0) {
-        return -1;
-    }
+
     sprintf(message, ACCEPT_CONNECTION_ASCII, "ls");
     send_message(user->connfd, message);
-    user->fp = popen(command, "r");
-    int result = pthread_create(&user->file_thread, NULL, &send_file, user);
-    return result;
+    user->fp = popen(command, "rb");
+    if (!user->fp) {
+        close(user->filefd);
+        return send_message(user->connfd, REJECT_RETR_READFILE);
+    }
+    if(pthread_create(&user->file_thread, NULL, &send_file, user)){
+        return send_message(user->connfd,LOCAL_ERROR);
+    }
+
+    return 0;
 
 }
 

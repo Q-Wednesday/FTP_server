@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "IO.h"
 #define REJECT_FILE_TRANS_NOT_CON "425 No TCP connection was established\r\n"
+
 int parse_ip(User *user, const char *sentence) {
     char ip[20];
     int count = 0, p = 0, q = 0;//p->sentence,q->ip
@@ -53,9 +54,9 @@ int connect_filefd(User *user, char *sentence) {
         return -1;
     }
     if (user->state == PORTMODE) {
-        //连接上目标主机（将socket和目标主机连接）-- 阻塞函数
         if (connect(user->filefd, (struct sockaddr *) &user->addr, sizeof(user->addr)) < 0) {
             printf("Error connect(): %s(%d)\n", strerror(errno), errno);
+            send_message(user->connfd, REJECT_FILE_TRANS_NOT_CON);
             return 1;
         }
         return 0;
@@ -64,6 +65,9 @@ int connect_filefd(User *user, char *sentence) {
     }
 }
 int parse_dir(char *user_path_parsed, char *source, User *user) {
+    /**
+     * return -1 when the dir access ..(cannot access the father of root)
+     */
     //source是收到的文件夹名称
     char user_path[MAX_MESSAGE_SIZE * 2];
     //进行对路径的处理，主要做法是忽略./和回退../。如果回退到了根目录就不再回退
@@ -116,5 +120,65 @@ int parse_dir(char *user_path_parsed, char *source, User *user) {
         user_path_parsed[q - 1] = '\0';//把最后的/去除
     } else
         user_path_parsed[q] = '\0';
+    return 0;
+}
+void get_local_ip(char *buffer) {
+    const char *google_dns_server = "8.8.8.8";
+    int dns_port = 53;
+    struct sockaddr_in serv;
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    //Socket could not be created
+    if (sock < 0) {
+        perror("Socket error");
+    }
+
+    memset(&serv, 0, sizeof(serv));
+    serv.sin_family = AF_INET;
+    serv.sin_addr.s_addr = inet_addr(google_dns_server);
+    serv.sin_port = htons(dns_port);
+    //TODO:错误处理
+    if (connect(sock, (const struct sockaddr *) &serv, sizeof(serv))) {
+
+    }
+
+    struct sockaddr_in name;
+    socklen_t namelen = sizeof(name);
+    getsockname(sock, (struct sockaddr *) &name, &namelen);
+    const char *p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
+    if (!p) {
+        //Some error
+        printf("Error number : %d . Error message : %s \n", errno, strerror(errno));
+    }
+    for (int i = 0; i < strlen(buffer); i++) {
+        //转化为逗号分隔
+        if (buffer[i] == '.') {
+            buffer[i] = ',';
+        }
+    }
+    close(sock);
+}
+int parse_arg(int argc, char **argv, int *port, char *root) {
+    //parse the arguments of the program
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-port") == 0) {
+            *port = 0;
+            int j = 0;
+            while (argv[i + 1][j] != '\0') {
+                if (argv[i + 1][j] > '9' || argv[i + 1][j] < '0') {
+                    printf("cannot parse port number\n");
+                    return -1;
+                }
+                *port = *port * 10 + argv[i + 1][j] - '0';
+                j++;
+            }
+            i++;
+        } else if (strcmp(argv[i], "-root") == 0) {
+            strcpy(root, argv[i + 1]);
+            i++;
+        } else {
+            printf("cannot parse the args\n");
+            return -2;
+        }
+    }
     return 0;
 }

@@ -9,67 +9,9 @@ char rootDir[MAX_MESSAGE_SIZE] = "/tmp";
 char local_ip[20];
 int running = 1;
 int num_threads = 0;//Number of running threads
-void get_local_ip(char *buffer) {
-    const char *google_dns_server = "8.8.8.8";
-    int dns_port = 53;
-    struct sockaddr_in serv;
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    //Socket could not be created
-    if (sock < 0) {
-        perror("Socket error");
-    }
 
-    memset(&serv, 0, sizeof(serv));
-    serv.sin_family = AF_INET;
-    serv.sin_addr.s_addr = inet_addr(google_dns_server);
-    serv.sin_port = htons(dns_port);
-    //TODO:错误处理
-    if (connect(sock, (const struct sockaddr *) &serv, sizeof(serv))) {
 
-    }
 
-    struct sockaddr_in name;
-    socklen_t namelen = sizeof(name);
-    getsockname(sock, (struct sockaddr *) &name, &namelen);
-    const char *p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
-    if (!p) {
-        //Some error
-        printf("Error number : %d . Error message : %s \n", errno, strerror(errno));
-    }
-    for (int i = 0; i < strlen(buffer); i++) {
-        //转化为逗号分隔
-        if (buffer[i] == '.') {
-            buffer[i] = ',';
-        }
-    }
-    close(sock);
-}
-
-int parse_arg(int argc, char **argv, int *port) {
-    //parse the arguments of the program
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-port") == 0) {
-            *port = 0;
-            int j = 0;
-            while (argv[i + 1][j] != '\0') {
-                if (argv[i + 1][j] > '9' || argv[i + 1][j] < '0') {
-                    printf("cannot parse port number\n");
-                    return -1;
-                }
-                *port = *port * 10 + argv[i + 1][j] - '0';
-                j++;
-            }
-            i++;
-        } else if (strcmp(argv[i], "-root") == 0) {
-            strcpy(rootDir, argv[i + 1]);
-            i++;
-        } else {
-            printf("cannot parse the args\n");
-            return -2;
-        }
-    }
-    return 0;
-}
 
 void* init_server(void* args) {
     /**
@@ -79,7 +21,7 @@ void* init_server(void* args) {
      ServerParams * params=(ServerParams*)args;
     int port = LISTENPORT;//default port
     get_local_ip(local_ip);
-    if (parse_arg(params->argc, params->argv, &port) != 0) {
+    if (parse_arg(params->argc, params->argv, &port, rootDir) != 0) {
         return NULL;
     }
     //printf("port: %d,root:%s\n",port,rootDir);
@@ -138,7 +80,7 @@ void* init_server(void* args) {
                 }
             }
         } else {
-            printf("The maximum number of connections has been reached\n");
+            send_message(connfd,"421 The maximum number of connections has been reached\r\n");
             close(connfd);
         }
     }

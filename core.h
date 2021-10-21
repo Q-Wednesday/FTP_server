@@ -22,6 +22,4 @@ typedef struct ServerParams{
 void* init_server(void* args);//set,bind,and start to listen
 void* main_process(void* args);//Every user has one
 int handle_command(User *user, char* sentence);//Handle the command
-int parse_arg(int argc, char **argv, int *port);//Parse the arg
-void get_local_ip(char *buf);
 #endif //FTP_SERVER_CORE_H

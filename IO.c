@@ -4,7 +4,7 @@
 //return 1表示正常进行，return 0表示错误进行
 #include "IO.h"
 #define ACCECPT_FILE_TRANS "226 Transfer complete\r\n"
-
+#define CONNECTION_CLOSED "426 Connection closed; transfer aborted.\r\n"
 int send_message(int connfd, char *buf) {
     int p = 0;
     size_t len= strlen(buf);
@@ -57,12 +57,12 @@ void* send_file(void *args){
     ssize_t m=-1;
     while(n!=0){
         n= fread(buf, sizeof(char),MAX_DATA_SIZE,user->fp);
-
         m= send(user->filefd,buf,n,0);
         printf("send m:%ld,n:%ld\n",m,n);
         if(m<0){
-            //TODO:做异常处理
+            send_message(user->connfd,CONNECTION_CLOSED);
             close(user->filefd);
+            user->state=LOGIN;
             return NULL;
         }
     }
@@ -70,14 +70,12 @@ void* send_file(void *args){
     fclose(user->fp);
     user->state=LOGIN;
     send_message(user->connfd,ACCECPT_FILE_TRANS);
-    //int i= recv(filefd,buf,MAX_DATA_SIZE,MSG_PEEK);
     return NULL;
 }
 void* receive_file(void* args){
     /**
      *
      */
-    //TODO：处理文件名重复的情况等等.传输有错误，那边已经发完了这边还在等待输入
     User* user=(User*)args;
     char buf[MAX_DATA_SIZE]={0};
 
@@ -88,7 +86,9 @@ void* receive_file(void* args){
         if(n<0){
             close(user->filefd);
             fclose(user->fp);
-            return -2;
+            send_message(user->connfd,CONNECTION_CLOSED);
+            user->state=LOGIN;
+            return NULL;
         }else if(n==0){
             break;
         }

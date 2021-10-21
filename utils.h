@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 // User's States.
-enum UserState{NOTLOGIN,REQPASS,LOGIN,PORTMODE,PASVMODE};
+enum UserState{NOTLOGIN,WRONGUSER,REQPASS,LOGIN,PORTMODE,PASVMODE};
 typedef struct User{
     int userNo;//The identifier assigned to the user, indicating the user's position in the array
     enum UserState state;
@@ -31,4 +31,6 @@ typedef struct User{
 int parse_ip(User *user, const char *sentence);
 int connect_filefd(User *user, char *sentence);
 int parse_dir(char *user_path_parsed, char *source, User *user);
+int parse_arg(int argc, char **argv, int *port, char *root);//Parse the arg
+void get_local_ip(char *buf);
 #endif //SERVER_UTILS_H
