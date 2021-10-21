@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include "utils.h"
 int send_message(int connfd, char *buf);
-int receive_message(int connfd,char* buf,int* len);
+int receive_message(int connfd,char* buf);
 void* send_file(void *args);
 void* receive_file(void* args);
 #endif //FTP_SERVER_IO_H

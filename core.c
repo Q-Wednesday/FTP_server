@@ -14,17 +14,19 @@ int num_threads = 0;//Number of running threads
 
 
 void* init_server(void* args) {
-    /**
-     *
-     *
+    /** Get local ip,parse the args, create socket
+     *  and accept connections
+     *  If there is an error in any step, it will exit
      */
      ServerParams * params=(ServerParams*)args;
     int port = LISTENPORT;//default port
-    get_local_ip(local_ip);
+    if(get_local_ip(local_ip)){
+        return NULL;
+    }
     if (parse_arg(params->argc, params->argv, &port, rootDir) != 0) {
         return NULL;
     }
-    //printf("port: %d,root:%s\n",port,rootDir);
+
     int listenfd, connfd;
     struct sockaddr_in addr;
     pthread_t threads[MAX_CONNECTION];
@@ -33,33 +35,32 @@ void* init_server(void* args) {
         users[i].userNo = -1;
     }
 
-    //创建socket
+    //create socket
     if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
         printf("Error socket(): %s(%d)\n", strerror(errno), errno);
         return NULL;
     }
 
-    //设置本机的ip和port
+    //set local ip and port
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);    //监听"0.0.0.0"
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    //将本机的ip和port与socket绑定
     if (bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         printf("Error bind(): %s(%d)\n", strerror(errno), errno);
         return NULL;
     }
 
-    //开始监听socket
+
     if (listen(listenfd, 10) == -1) {
         printf("Error listen(): %s(%d)\n", strerror(errno), errno);
         return NULL;
     }
-    //持续监听连接请求
+
 
     while (running) {
-        //等待client的连接 -- 阻塞函数
+
         if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
             printf("Error accept(): %s(%d)\n", strerror(errno), errno);
             continue;
@@ -72,7 +73,7 @@ void* init_server(void* args) {
                     users[p].state = NOTLOGIN;
                     users[p].userNo = p;
                     num_threads++;
-                    strcpy(users[p].dir, "/");//默认进入的是根文件夹
+                    strcpy(users[p].dir, "/");
                     if (pthread_create(&threads[p], NULL, main_process, &users[p])) {
                         printf("Error pthread_create(): %s(%d)\n", strerror(errno), errno);
                     }
@@ -98,10 +99,10 @@ void *main_process(void *args) {
     char sentence[8192];
     int len;
     user->state = NOTLOGIN;
-    receive_message(user->connfd, sentence, &len);
+    receive_message(user->connfd, sentence);
     printf("%s\n", sentence);
     while (handle_command(user, sentence) == 0) {
-        receive_message(user->connfd, sentence, &len);
+        receive_message(user->connfd, sentence);
     }
     close(user->connfd);
     num_threads--;

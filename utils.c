@@ -6,6 +6,7 @@
 #define REJECT_FILE_TRANS_NOT_CON "425 No TCP connection was established\r\n"
 
 int parse_ip(User *user, const char *sentence) {
+    // Parse ip to the format separated with '.'
     char ip[20];
     int count = 0, p = 0, q = 0;//p->sentence,q->ip
     user->addr.sin_family = AF_INET;
@@ -48,7 +49,7 @@ int parse_ip(User *user, const char *sentence) {
     return 0;
 }
 int connect_filefd(User *user, char *sentence) {
-    //只用于进行连接，连接后的消息应该由调用者发送
+    //Used to connect the file fd
     if (user->state != PORTMODE && user->state != PASVMODE) {
         send_message(user->connfd, REJECT_FILE_TRANS_NOT_CON);
         return -1;
@@ -66,11 +67,11 @@ int connect_filefd(User *user, char *sentence) {
 }
 int parse_dir(char *user_path_parsed, char *source, User *user) {
     /**
-     * return -1 when the dir access ..(cannot access the father of root)
+     * return -1 when the dir access ..(cannot access the parent of root)
      */
-    //source是收到的文件夹名称
+
     char user_path[MAX_MESSAGE_SIZE * 2];
-    //进行对路径的处理，主要做法是忽略./和回退../。如果回退到了根目录就不再回退
+    //Deal with the '.' and '..' in path,if reach the root '/',return -1
     size_t len = strlen(source);
     source[len - 2] = '\0';
     if (source[0] == '/') {
@@ -122,7 +123,9 @@ int parse_dir(char *user_path_parsed, char *source, User *user) {
         user_path_parsed[q] = '\0';
     return 0;
 }
-void get_local_ip(char *buffer) {
+
+int get_local_ip(char *buffer) {
+
     const char *google_dns_server = "8.8.8.8";
     int dns_port = 53;
     struct sockaddr_in serv;
@@ -130,15 +133,16 @@ void get_local_ip(char *buffer) {
     //Socket could not be created
     if (sock < 0) {
         perror("Socket error");
+        return -1;
     }
 
     memset(&serv, 0, sizeof(serv));
     serv.sin_family = AF_INET;
     serv.sin_addr.s_addr = inet_addr(google_dns_server);
     serv.sin_port = htons(dns_port);
-    //TODO:错误处理
-    if (connect(sock, (const struct sockaddr *) &serv, sizeof(serv))) {
 
+    if (connect(sock, (const struct sockaddr *) &serv, sizeof(serv))) {
+        return -1;
     }
 
     struct sockaddr_in name;
@@ -148,6 +152,7 @@ void get_local_ip(char *buffer) {
     if (!p) {
         //Some error
         printf("Error number : %d . Error message : %s \n", errno, strerror(errno));
+        return -1;
     }
     for (int i = 0; i < strlen(buffer); i++) {
         //转化为逗号分隔
@@ -156,6 +161,7 @@ void get_local_ip(char *buffer) {
         }
     }
     close(sock);
+    return 0;
 }
 int parse_arg(int argc, char **argv, int *port, char *root) {
     //parse the arguments of the program
