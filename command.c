@@ -27,6 +27,7 @@
 #define MKD_COMMAND "mkdir %s%s"
 #define CWD_COMMAND "cd %s"
 #define CWD_FAILED "550 %s: No such file or directory\r\n"
+#define CWD_ACCEPTED "250 OK.\r\n"
 #define RMD_COMMAND "rm -r %s%s"
 #define RMD_SUCCESS "250 Successfully removed\r\n"
 #define RMD_FAILED "550 Removal Failed\r\n"
@@ -162,7 +163,7 @@ int handle_PASV(User *user, char *sentence) {
     addr.sin_addr.s_addr = htonl(INADDR_ANY);    //listen on "0.0.0.0"
     int listenfd;
     //When any error occured, tell the client
-    if (listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) ||
+    if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))==-1 ||
                    bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) ||
                    listen(listenfd, 10)) {
         printf("Error : %s(%d)\n", strerror(errno), errno);
@@ -241,8 +242,10 @@ int handle_QUIT(User *user, char *sentence) {
     /** Handle the command QUIT
      * return -1 and the main_process will release the user
      */
-    close(user->filefd);
-    fclose(user->fp);
+
+    if(user->state==PASVMODE || user->state==PORTMODE){
+        close(user->filefd);
+    }
     send_message(user->connfd, GOODBYE);
     return -1;
 }
@@ -290,9 +293,12 @@ int handle_LIST(User *user, char *sentence) {
         return send_message(user->connfd,FILE_UNAVAILABLE);
     }
     //Turn the bare linefeeds to CRLF
-    FILE *temp= fopen("/tmp/server_list_temp","w");
-
+    char temp_filename[100];
+    sprintf(temp_filename,"/tmp/server_list_temp%d",user->userNo);
+    FILE *temp= fopen(temp_filename,"w");
+    int flag=1;//Is the directory empty?
     while(fgets(buf,MAX_DATA_SIZE,output)){
+        flag=0;
         size_t len= strlen(buf);
         if(buf[len-2]!='\r'){
             buf[len-1]='\r';
@@ -301,8 +307,11 @@ int handle_LIST(User *user, char *sentence) {
         }
         fwrite(buf,sizeof (char),len+1,temp);
     }
+    if(flag){
+        fprintf(temp,"This Directory is Empty.\r\n");
+    }
     fclose(temp);
-    user->fp= fopen("/tmp/server_list_temp","r");
+    user->fp= fopen(temp_filename,"r");
     if(pthread_create(&user->file_thread, NULL, &send_file, user)){
         return send_message(user->connfd,LOCAL_ERROR);
     }
@@ -350,7 +359,7 @@ int handle_CWD(User *user, char *sentence) {
     sprintf(command, CWD_COMMAND, full_path);
     if (system(command) == 0) {
         strcpy(user->dir, user_path_parsed);
-        return send_message(user->connfd, FILE_UNAVAILABLE);
+        return send_message(user->connfd, CWD_ACCEPTED);
     }
     sprintf(message,CWD_FAILED,user_path_parsed);
     return send_message(user->connfd, message);
@@ -400,6 +409,7 @@ int handle_RNTO(User *user, char *sentence) {
     if(user->state!=REQRNFR){
         return send_message(user->connfd,NOT_RNFR);
     }
+    user->state=LOGIN;
     char user_path_parsed[MAX_MESSAGE_SIZE * 2], command[MAX_DATA_SIZE];
     if (parse_dir(user_path_parsed, sentence + 5, user)) {
         return send_message(user->connfd, FILE_UNAVAILABLE);

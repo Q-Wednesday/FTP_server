@@ -12,6 +12,8 @@
 #include <memory.h>
 #include <stdio.h>
 #include <pthread.h>
+#include  <unistd.h>
+#include <signal.h>
 #include "command.h"
 #define LISTENPORT 21
 #define MAX_CONNECTION 2

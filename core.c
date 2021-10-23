@@ -2,12 +2,12 @@
 // Created by 邱俣涵 on 2021/10/4.
 //
 #include "core.h"
-
 #define GREETING "220 Anonymous FTP server ready.\r\n"
 #define SERVICE_UNAVAILABLE "421 Service not available, remote server has closed connection\r\n"
+#define MAX_CONNECTIONS_REACHED "421 The maximum number of connections has been reached\r\n"
 char rootDir[MAX_MESSAGE_SIZE] = "/tmp";
 char local_ip[20];
-int running = 1;
+int running = 1;//
 int num_threads = 0;//Number of running threads
 
 
@@ -16,16 +16,16 @@ int num_threads = 0;//Number of running threads
 void* init_server(void* args) {
     /** Get local ip,parse the args, create socket
      *  and accept connections
-     *  If there is an error in any step, it will exit
+     *  If there is an error in any step, it will exit and send a signal to
+     *  the process itself
      */
+
      ServerParams * params=(ServerParams*)args;
     int port = LISTENPORT;//default port
-    if(get_local_ip(local_ip)){
+    if(get_local_ip(local_ip) || parse_arg(params->argc, params->argv, &port, rootDir)){
         return NULL;
     }
-    if (parse_arg(params->argc, params->argv, &port, rootDir) != 0) {
-        return NULL;
-    }
+
 
     int listenfd, connfd;
     struct sockaddr_in addr;
@@ -81,9 +81,17 @@ void* init_server(void* args) {
                 }
             }
         } else {
-            send_message(connfd,"421 The maximum number of connections has been reached\r\n");
+            send_message(connfd,MAX_CONNECTIONS_REACHED);
             close(connfd);
         }
+    }
+    //Send 421 to all clients
+    for(int i=0;i<MAX_CONNECTION;i++){
+        if(users[i].userNo<0)continue;
+        close(users[i].filefd);
+        fclose(users[i].fp);
+        send_message(users[i].connfd,SERVICE_UNAVAILABLE);
+        close(users[i].connfd);
     }
     close(listenfd);
     return NULL;
@@ -97,7 +105,6 @@ void *main_process(void *args) {
         return NULL;
     }
     char sentence[8192];
-    int len;
     user->state = NOTLOGIN;
     receive_message(user->connfd, sentence);
     printf("%s\n", sentence);
