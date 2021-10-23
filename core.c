@@ -37,7 +37,6 @@ void* init_server(void* args) {
 
     //create socket
     if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-        printf("Error socket(): %s(%d)\n", strerror(errno), errno);
         return NULL;
     }
 
@@ -48,13 +47,11 @@ void* init_server(void* args) {
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
-        printf("Error bind(): %s(%d)\n", strerror(errno), errno);
         return NULL;
     }
 
 
     if (listen(listenfd, 10) == -1) {
-        printf("Error listen(): %s(%d)\n", strerror(errno), errno);
         return NULL;
     }
 
@@ -62,7 +59,6 @@ void* init_server(void* args) {
     while (running) {
 
         if ((connfd = accept(listenfd, NULL, NULL)) == -1) {
-            printf("Error accept(): %s(%d)\n", strerror(errno), errno);
             continue;
         }
         int p;
@@ -75,7 +71,7 @@ void* init_server(void* args) {
                     num_threads++;
                     strcpy(users[p].dir, "/");
                     if (pthread_create(&threads[p], NULL, main_process, &users[p])) {
-                        printf("Error pthread_create(): %s(%d)\n", strerror(errno), errno);
+                        send_message(connfd,SERVICE_UNAVAILABLE);
                     }
                     break;
                 }
@@ -107,7 +103,6 @@ void *main_process(void *args) {
     char sentence[8192];
     user->state = NOTLOGIN;
     receive_message(user->connfd, sentence);
-    printf("%s\n", sentence);
     while (handle_command(user, sentence) == 0) {
         receive_message(user->connfd, sentence);
     }

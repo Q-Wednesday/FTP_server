@@ -130,7 +130,6 @@ int handle_PORT(User *user, char *sentence) {
     //If cannot create,tell the client
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-        printf("Error socket(): %s(%d)\n", strerror(errno), errno);
         return send_message(user->connfd, CANNOT_OPEN_DATA_CONNECTION);
     }
     user->filefd = sockfd;
@@ -166,14 +165,12 @@ int handle_PASV(User *user, char *sentence) {
     if ((listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))==-1 ||
                    bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) ||
                    listen(listenfd, 10)) {
-        printf("Error : %s(%d)\n", strerror(errno), errno);
         return send_message(user->connfd, CANNOT_OPEN_DATA_CONNECTION);
     }
 
     sprintf(message, ENTER_PASV, local_ip, random_port / 256, random_port % 256);
     send_message(user->connfd, message);
     if ((user->filefd = accept(listenfd, NULL, NULL)) == -1) {
-        printf("Error accept(): %s(%d)\n", strerror(errno), errno);
         return send_message(user->connfd, CANNOT_OPEN_DATA_CONNECTION);
     }
     user->state = PASVMODE;

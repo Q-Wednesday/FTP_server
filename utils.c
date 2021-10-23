@@ -56,7 +56,6 @@ int connect_filefd(User *user, char *sentence) {
     }
     if (user->state == PORTMODE) {
         if (connect(user->filefd, (struct sockaddr *) &user->addr, sizeof(user->addr)) < 0) {
-            printf("Error connect(): %s(%d)\n", strerror(errno), errno);
             send_message(user->connfd, REJECT_FILE_TRANS_NOT_CON);
             return 1;
         }

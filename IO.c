@@ -9,15 +9,12 @@ int send_message(int connfd, char *buf) {
     size_t len= strlen(buf);
     while (p < len) {
         ssize_t n = write(connfd, buf + p, len - p);
-        printf("send %ld\n",n);
         if (n <= 0) {
-            printf("Error write(): %s(%d)\n", strerror(errno), errno);
             return -1;
         } else {
             p += n;
         }
     }
-    printf("send %s",buf);
     return 0;
 }
 
@@ -25,9 +22,7 @@ int receive_message(int connfd,char* buf){
     ssize_t p=0;
     while (1) {
         ssize_t n = read(connfd, buf + p, MAX_MESSAGE_SIZE - p);
-        printf("receive: %d\n",n);
         if (n < 0) {
-            printf("Error read(): %s(%d)\n", strerror(errno), errno);
             close(connfd);
             return -1;
         } else if (n == 0) {
@@ -40,8 +35,6 @@ int receive_message(int connfd,char* buf){
         }
     }
     buf[p]='\0';
-    printf("content received:%s\n",buf);
-    printf("len:%lu\n", strlen(buf));
     return 0;
 }
 
@@ -54,7 +47,6 @@ void* send_file(void *args){
     while(n!=0){
         n= fread(buf, sizeof(char),MAX_DATA_SIZE,user->fp);
         m= send(user->filefd,buf,n,0);
-        printf("send m:%ld,n:%ld\n",m,n);
         if(m<0){
             send_message(user->connfd,CONNECTION_CLOSED);
             close(user->filefd);
@@ -76,7 +68,6 @@ void* receive_file(void* args){
     ssize_t n=MAX_DATA_SIZE;
     while (1){
         n= recv(user->filefd,buf,MAX_DATA_SIZE,MSG_WAITALL);
-        printf("receive file:%ld\n",n);
         if(n<0){
             close(user->filefd);
             fclose(user->fp);
