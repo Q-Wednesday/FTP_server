@@ -29,7 +29,7 @@ int receive_message(int connfd,char* buf){
         if (n < 0) {
             printf("Error read(): %s(%d)\n", strerror(errno), errno);
             close(connfd);
-            continue;
+            return -1;
         } else if (n == 0) {
             break;
         } else {
