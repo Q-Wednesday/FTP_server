@@ -3,6 +3,7 @@
 //
 #include "command.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include<pthread.h>
 
 #define REQ_PASSWORD "331 Guest login ok,send your complete e-mail address as password\r\n"

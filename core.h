@@ -16,10 +16,10 @@
 #include <signal.h>
 #include "command.h"
 #define LISTENPORT 21
-#define MAX_CONNECTION 2
+#define MAX_CONNECTION 10
 typedef struct ServerParams{
     int argc;
-    int* argv;
+    char** argv;
 }ServerParams;
 void* init_server(void* args);//set,bind,and start to listen
 void* main_process(void* args);//Every user has one

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 // User's States.
 enum UserState{NOTLOGIN,WRONGUSER,REQPASS,LOGIN,PORTMODE,PASVMODE,REQRNFR};
